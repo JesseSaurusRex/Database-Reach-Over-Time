@@ -1,0 +1,141 @@
+with q as 
+(select consumer_sk,
+brand+'_'+engagement_type brandsource
+from d_rpt_cm_v.consumers_original_engagement
+group by consumer_sk, brand+'_'+engagement_type),
+r as (select consumer_sk, case when rsd_sum_price>=1 then 'Linked/Matched' else null end LinkMatch, match_type
+from d_discovery_hh.goldentable_final
+group by 1, 2,3)
+select 
+ count(distinct cnsmr_sk) ATCs, case when r.LinkMatch='Linked/Matched' then 'Linked/Matched' else 'No Link' end AccountLinks,
+match_type ,
+ case when asu_aso in ('ASO','ASU') then 'All' else null end AllTotal,
+ case when Mailing_List like '%eml6' then 'EML 6'
+ when Mailing_List like '%aml12'then 'AML 12'
+ when Mailing_List like '%aml24' then 'AML 24'
+ else 'Missing Recency' end Recency,
+case when  Mailing_List like 'newport%' and lwebdate_newport>=dateadd(month,-6,start_dt) then 'Web Engaged'
+  when Mailing_List like 'camel%' and lwebdate_camel>=dateadd(month,-6,start_dt) then 'Web Engaged'
+when Mailing_List like 'nas%' and lwebdate_nas>=dateadd(month,-6,start_dt) then 'Web Engaged'
+when Mailing_List like 'luckystrike%' and  lwebdate_luckystrike>=dateadd(month,-6,start_dt) then 'Web Engaged'
+when Mailing_List like 'pallmall%' and lwebdate_pallmall>=dateadd(month,-6,start_dt) then 'Web Engaged'
+when Mailing_List like 'grizzly%' and lwebdate_grizzly>=dateadd(month,-6,start_dt) then 'Web Engaged'
+when Mailing_List like 'kodiak%' and  lwebdate_kodiak>=dateadd(month,-6,start_dt) then 'Web Engaged'
+  when Mailing_List like 'cougar%' and  lwebdate_cougar>=dateadd(month,-6,start_dt) then 'Web Engaged'
+when Mailing_List like 'snus%' and  lwebdate_snus>=dateadd(month,-6,start_dt) then 'Web Engaged'
+  when Mailing_List like 'velo%' and  lwebdate_velo>=dateadd(month,-6,start_dt) then 'Web Engaged'
+when Mailing_List like 'vuse%'  and lwebdate_vuse>=dateadd(month,-6,start_dt) then 'Web Engaged'
+when mailing_list in ('aml12','aml24','eml6') and lwebdate>=dateadd(month,-6,start_dt) then 'Web Engaged'
+else ' Not Engaged' end L6moWeb,
+ case when  Mailing_List like 'newport%' and not lwebdate_newport is null then 'Web Credentialed'
+ when  Mailing_List like 'newport%' and  lwebdate_newport is null then 'Not Web Credentialed'
+ when Mailing_List like 'camel%' and not lwebdate_camel is null then 'Web Credentialed'
+  when Mailing_List like 'camel%' and lwebdate_camel is null then 'Not Web Credentialed'
+when Mailing_List like 'nas%' and not lwebdate_nas is null then 'Web Credentialed'
+when Mailing_List like 'nas%' and  lwebdate_nas is null then 'Not Web Credentialed'
+when Mailing_List like 'luckystrike%' and not lwebdate_luckystrike is null then 'Web Credentialed'
+when Mailing_List like 'luckystrike%' and  lwebdate_luckystrike is null then 'Not Web Credentialed'
+when Mailing_List like 'pallmall%' and not lwebdate_pallmall is null then 'Web Credentialed'
+when Mailing_List like 'pallmall%' and  lwebdate_pallmall is null then 'Not Web Credentialed'
+when Mailing_List like 'grizzly%' and not lwebdate_grizzly is null then 'Web Credentialed'
+when Mailing_List like 'grizzly%' and  lwebdate_grizzly is null then 'Not Web Credentialed'
+when Mailing_List like 'kodiak%' and not lwebdate_kodiak is null then 'Web Credentialed'
+when Mailing_List like 'kodiak%' and  lwebdate_kodiak is null then 'Not Web Credentialed'
+ when Mailing_List like 'cougar%' and not lwebdate_cougar is null then 'Web Credentialed'
+  when Mailing_List like 'cougar%' and  lwebdate_cougar is null then 'Not Web Credentialed'
+when Mailing_List like 'snus%' and not lwebdate_snus is null then 'Web Credentialed'
+when Mailing_List like 'snus%' and  lwebdate_snus is null then 'Not Web Credentialed'
+ when Mailing_List like 'velo%' and not lwebdate_velo is null then 'Web Credentialed'
+  when Mailing_List like 'velo%' and  lwebdate_velo is null then 'Not Web Credentialed'
+when Mailing_List like 'vuse%' and not lwebdate_vuse is null then 'Web Credentialed'
+when Mailing_List like 'vuse%'  and lwebdate_vuse is null then 'Not Web Credentialed'
+when mailing_list in ('aml12','aml24','eml6') and not lwebdate is null then 'Web Credentialed'
+when mailing_list in ('aml12','aml24','eml6') and  lwebdate is null then 'Not Web Credentialed'
+else 'Unknown Web Credentials' end WebCredentials,
+ case 
+ when Mailing_List like 'newport%'  then 'NEWPORT'
+ when Mailing_List like 'camel%' then 'CAMEL'
+when Mailing_List like 'nas%' then 'NAS'
+when Mailing_List like 'luckystrike%' then 'LUCKY STRIKE'
+when Mailing_List like 'pallmall%' then 'PALL MALL'
+when Mailing_List like 'grizzly%' then 'GRIZZLY'
+when Mailing_List like 'kodiak%' then 'KODIAK'
+ when Mailing_List like 'cougar%' then 'COUGAR'
+when Mailing_List like 'snus%' then 'CAMEL SNUS'
+ when Mailing_List like 'velo%' then 'VELO'
+when Mailing_List like 'vuse%' then 'VUSE'
+when mailing_list in ('aml12','aml24','eml6') then 'TOTAL'
+else Mailing_List end BrandName,
+ Present, date((left(dt,len(dt) -3) + '-' + right(dt,len(dt) -5))+'-01'), asu_aso,cbsa_title MSA, a.state,
+ case  when Mailing_List in ('aml12','aml24','eml6') then 'All Brands'
+ when Mailing_List like 'newport%'  and brandsource like 'NEWPORT%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource))
+ when Mailing_List like 'camel%' and brandsource like 'CAMEL%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource))
+when Mailing_List like 'nas%' and brandsource like 'NATURAL AMERICAN SPIRIT%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource))
+when Mailing_List like 'luckystrike%' and brandsource like 'LUCKY STRIKE%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource))
+when Mailing_List like 'pallmall%' and brandsource like 'PALL MALL BOX%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource))
+when Mailing_List like 'grizzly%' and brandsource like 'GRIZZLY%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource))
+when Mailing_List like 'kodiak%' and brandsource like 'KODIAK%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource))
+ when Mailing_List like 'cougar%' and brandsource like 'COUGAR%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource))
+when Mailing_List like 'snus%' and brandsource like 'CAMEL SNUS%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource))
+ when Mailing_List like 'velo%' and brandsource like 'VELO%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource))
+when Mailing_List like 'vuse%' and brandsource like 'VUSE%' then substring(brandsource, charindex('_', brandsource)+1, len(brandsource)-charindex('_',brandsource)) 
+when Mailing_List like 'newport%'  and not brandsource like 'NEWPORT%' then 'Unknown Source'
+when Mailing_List like 'camel%' and brandsource not like 'CAMEL%' then 'Unknown Source'
+when Mailing_List like 'nas%' and brandsource not like 'NATURAL AMERICAN SPIRIT%' then 'Unknown Source'
+when Mailing_List like 'luckystrike%' and not brandsource like 'LUCKY STRIKE%' then 'Unknown Source'
+when Mailing_List like 'pallmall%' and not brandsource like 'PALL MALL BOX%' then 'Unknown Source'
+when Mailing_List like 'grizzly%' and not brandsource like 'GRIZZLY%' then 'Unknown Source'
+when Mailing_List like 'kodiak%' and not brandsource like 'KODIAK%' then 'Unknown Source'
+ when Mailing_List like 'cougar%' and not brandsource like 'COUGAR%' then 'Unknown Source'
+ when Mailing_List like 'snus%' and not brandsource like 'CAMEL SNUS%'then 'Unknown Source'
+ when Mailing_List like 'velo%' and not brandsource like 'VELO%' then 'Unknown Source'
+ when Mailing_List like 'vuse%' and not brandsource like 'VUSE%' then 'Unknown Source'
+ else 'missing' end AcquisitionSource, 
+ case when Mailing_List like 'newport%'  and  upper(ub_combust)='NEWPORT' then 'Franchise' 
+  when Mailing_List like'newport%' and (ub_combust is null or ub_combust like 'UNK%') then 'Unknown UB'
+  when Mailing_List like 'newport%' and not (ub_combust is null or ub_combust like 'UNK%') and upper(ub_combust)<>'NEWPORT' then 'Competitive'
+ when Mailing_List like 'camel%' and upper(ub_combust)='CAMEL' then 'Franchise' 
+ when Mailing_List like 'camel%' and  (ub_combust is null or ub_combust like 'UNK%') then 'Unknown UB'
+ when Mailing_List like 'camel%' and not (ub_combust is null or ub_combust like 'UNK%') and upper(ub_combust) <>'CAMEL' then 'Competitive'
+ when Mailing_List like 'nas%' and upper(ub_combust)='NATURAL AMERICAN SPIRIT' then 'Franchise' 
+  when Mailing_List like 'nas%' and (ub_combust is null or ub_combust like 'UNK%') then 'Unknown UB'
+WHEN Mailing_List like 'nas%' and not (ub_combust is null or ub_combust like 'UNK%') and upper(ub_combust)<>'NATURAL AMERICAN SPIRIT' then 'Competitive'
+ when Mailing_List like 'luckystrike%'and upper(ub_combust)='LUCKY STRIKE' then 'Franchise'
+ when Mailing_List like 'luckystrike%' and  (ub_combust is null or ub_combust like 'UNK%') then 'Unknown UB'
+ WHEN Mailing_List like 'luckystrike%' and not (ub_combust is null or ub_combust like 'UNK%') and upper(ub_combust)<>'LUCKY STRIKE' then 'Competititve'
+when Mailing_List like 'pallmall%' and upper(ub_combust)='PALL MALL' then 'Franchise' 
+ when Mailing_List like 'pallmall%' and (ub_combust is null or ub_combust like 'UNK%') then 'Unknown UB'
+when Mailing_List like 'pallmall%' and not (ub_combust is null or ub_combust like 'UNK%') and upper(ub_combust)<>'PALL MALL' then 'Competitive'
+when Mailing_List like 'grizzly%' and upper(a.ub_moist)='GRIZZLY' then 'Franchise' 
+ when Mailing_List like 'grizzly%' and  (a.ub_moist is null or a.ub_moist like 'UNK%') then 'Unknown UB'
+when Mailing_List like 'grizzly%' and not (a.ub_moist is null or a.ub_moist like 'UNK%')  and upper(a.ub_moist)<>'GRIZZLY' then 'Competitive'
+when Mailing_List like 'kodiak%' and upper(a.ub_moist)='KODIAK' then 'Franchise' 
+ when Mailing_List like 'kodiak%' and  (a.ub_moist is null or a.ub_moist like 'UNK%')  then 'Unknown UB'
+when Mailing_List like 'kodiak%' and not (a.ub_moist is null or a.ub_moist like 'UNK%')  and upper(a.ub_moist)<>'KODIAK' then 'Competitive'
+ when Mailing_List like 'cougar%' and upper(a.ub_moist)='COUGAR' then 'Franchise' 
+ when Mailing_List like 'cougar%' and  (a.ub_moist is null or a.ub_moist like 'UNK%')  then 'Unknown UB'
+ when Mailing_List like 'cougar%' and not (a.ub_moist is null or a.ub_moist like 'UNK%') and upper(a.ub_moist)<>'COUGAR' then 'Competitive'
+when Mailing_List like 'snus%' and upper(a.ub_snus)='CAMEL SNUS' then 'Franchise' 
+ when Mailing_List like 'snus%'  and (a.ub_snus is null or a.ub_snus like 'UNK%')  then 'Unknown UB'
+when Mailing_List like 'snus%' and not (a.ub_snus is null or a.ub_snus like 'UNK%')  and upper(a.ub_snus)<>'CAMEL SNUS' then 'Competitive'
+ when Mailing_List like 'velo%' and upper(a.ub_diss) like 'VELO%' then 'Franchise' 
+  when Mailing_List like 'velo%'  and (a.ub_diss is null or a.ub_diss like 'UNK%')  then 'Unknown UB'
+when Mailing_List like 'velo%' and not (a.ub_diss is null or a.ub_diss like 'UNK%')  and not upper(a.ub_diss) like 'VELO%' then 'Competitive'
+when Mailing_List like 'vuse%' and upper(a.ub_vap) like 'VUSE%' then 'Franchise' 
+ when Mailing_List like 'vuse%'  and (a.ub_vap is null or a.ub_vap like 'UNK%')  then 'Unknown UB'
+when Mailing_List like 'vuse%' and not(a.ub_vap is null or a.ub_vap like 'UNK%')  and not upper(a.ub_vap) like 'VUSE%' then 'Competitive' else 'Total Brand' end UsualBrand
+from d_rpt_cm_v.consumer_snapshot
+unpivot
+(Present for Mailing_List in (newport_aml12, camel_aml12, luckystrike_aml12, aml12, pallmall_aml12, nas_aml12, grizzly_aml12, kodiak_aml12, cougar_aml12, vuse_aml12, snus_aml12, velo_aml12,
+eml6, newport_eml6, camel_eml6,nas_eml6, luckystrike_eml6,pallmall_eml6, grizzly_eml6,kodiak_eml6,cougar_eml6,vuse_eml6,snus_eml6,velo_eml6, aml24, newport_aml24, camel_aml24, nas_aml24, luckystrike_aml24, pallmall_aml24, grizzly_aml24, kodiak_aml24, cougar_aml24, vuse_aml24, 
+snus_aml24, velo_aml24) ) as a 
+left join q on q.consumer_sk=a.cnsmr_sk
+ join d_rpt_cm_v.consumer_lkup c 
+on a.cnsmr_sk=c.consumer_sk 
+left join r on r.consumer_sk=a.cnsmr_sk 
+where 
+ (mailable='Y' or emailable='Y')
+and not AcquisitionSource='missing'
+and not Recency='Missing Recency'
+ group by 
+ 2,3,4,5,6,7,8,9,10,11,12,13,14,15
